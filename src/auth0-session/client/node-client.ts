@@ -70,9 +70,9 @@ export class NodeClient extends AbstractClient {
     applyHttpOptionsCustom(Issuer);
     let issuer: Issuer<Client>;
     try {
-      issuer = await Issuer.discover(config.issuerBaseURL);
+      issuer = await Issuer.discover(config.discoveryURL ?? config.issuerBaseURL);
     } catch (e) {
-      throw new DiscoveryError(e, config.issuerBaseURL);
+      throw new DiscoveryError(e, config.discoveryURL ?? config.issuerBaseURL);
     }
     applyHttpOptionsCustom(issuer);
 
@@ -141,6 +141,23 @@ export class NodeClient extends AbstractClient {
             const parsedUrl = new URL(urlJoin(issuer.metadata.issuer, '/v2/logout'));
             parsedUrl.searchParams.set('client_id', config.clientID);
             post_logout_redirect_uri && parsedUrl.searchParams.set('returnTo', post_logout_redirect_uri);
+            Object.entries(extraParams).forEach(([key, value]) => {
+              if (value === null || value === undefined) {
+                return;
+              }
+              parsedUrl.searchParams.set(key, value as string);
+            });
+            return parsedUrl.toString();
+          }
+        });
+      } else if (this.config.discoveryEndSessionURL != null) {
+        Object.defineProperty(this.client, 'endSessionUrl', {
+          value(params: EndSessionParameters) {
+            const { id_token_hint, post_logout_redirect_uri, ...extraParams } = params;
+            const parsedUrl = new URL(config.discoveryEndSessionURL as string);
+            parsedUrl.searchParams.set('client_id', config.clientID);
+            post_logout_redirect_uri &&
+              parsedUrl.searchParams.set(config.postLogoutRedirectParam, post_logout_redirect_uri);
             Object.entries(extraParams).forEach(([key, value]) => {
               if (value === null || value === undefined) {
                 return;

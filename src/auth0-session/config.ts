@@ -146,6 +146,21 @@ export interface Config {
   issuerBaseURL: string;
 
   /**
+   * Optional value for the token issuer's JWKS URI.
+   */
+  discoveryURL?: string;
+
+  /**
+   * Optional end_session_url if issuer does not support in discovery ( AWS Cognito )
+   */
+  discoveryEndSessionURL?: string;
+
+  /**
+   * Optional parameter name for post logout reditect in idp end session ( default 'returnTo' )
+   */
+  postLogoutRedirectParam: string;
+
+  /**
    * Set a fallback cookie with no SameSite attribute when `response_mode` is `form_post`.
    * Defaults to `true`.
    */

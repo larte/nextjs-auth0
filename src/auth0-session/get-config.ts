@@ -123,6 +123,9 @@ const paramsSchema = Joi.object({
     .optional()
     .default((parent) => parent.auth0Logout || false),
   idTokenSigningAlg: Joi.string().insensitive().not('none').optional().default('RS256'),
+  discoveryURL: Joi.string().uri().optional(),
+  discoveryEndSessionURL: Joi.string().uri().optional().default('returnTo'),
+  postLogoutRedirectParam: Joi.string().optional(),
   issuerBaseURL: Joi.string().uri().required(),
   legacySameSiteCookie: Joi.boolean().optional().default(true),
   routes: Joi.object({

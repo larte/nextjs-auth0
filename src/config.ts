@@ -149,6 +149,21 @@ export interface BaseConfig {
   issuerBaseURL: string;
 
   /**
+   *
+   */
+  discoveryURL?: string;
+
+  /**
+   * URL for ending session, if provider discovery does not issue one.
+   */
+  discoveryEndSessionURL?: string;
+
+  /**
+   * Optional parameter name for post logout reditect in idp end session ( default 'returnTo' )
+   */
+  postLogoutRedirectParam: string;
+
+  /**
    * Set a fallback cookie with no `SameSite` attribute when `response_mode` is `form_post`.
    * The default `response_mode` for this SDK is `query` so this defaults to `false`
    * You can also use the `AUTH0_LEGACY_SAME_SITE_COOKIE` environment variable.
@@ -492,6 +507,8 @@ export const getConfig = (params: ConfigParameters = {}): { baseConfig: BaseConf
   const AUTH0_CLIENT_ID = process.env.AUTH0_CLIENT_ID;
   const AUTH0_CLIENT_SECRET = process.env.AUTH0_CLIENT_SECRET;
   const AUTH0_CLOCK_TOLERANCE = process.env.AUTH0_CLOCK_TOLERANCE;
+  const AUTH0_DISCOVERY_URL = process.env.AUTH0_DISCOVERY_URL;
+  const AUTH0_DISCOVERY_END_SESSION_URL = process.env.AUTH0_DISCOVERY_END_SESSION_URL;
   const AUTH0_HTTP_TIMEOUT = process.env.AUTH0_HTTP_TIMEOUT;
   const AUTH0_ENABLE_TELEMETRY = process.env.AUTH0_ENABLE_TELEMETRY;
   const AUTH0_IDP_LOGOUT = process.env.AUTH0_IDP_LOGOUT;
@@ -528,6 +545,8 @@ export const getConfig = (params: ConfigParameters = {}): { baseConfig: BaseConf
     secret: AUTH0_SECRET,
     issuerBaseURL: AUTH0_ISSUER_BASE_URL,
     baseURL: baseURL,
+    discoveryURL: AUTH0_DISCOVERY_URL,
+    discoveryEndSessionURL: AUTH0_DISCOVERY_END_SESSION_URL,
     clientID: AUTH0_CLIENT_ID,
     clientSecret: AUTH0_CLIENT_SECRET,
     clockTolerance: num(AUTH0_CLOCK_TOLERANCE),
