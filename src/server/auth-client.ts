@@ -41,6 +41,8 @@ export type BeforeSessionSavedHook = (
   idToken: string | null
 ) => Promise<SessionData>;
 
+export type BeforeLogoutHook = (session: SessionData | null) => Promise<void>;
+
 export type OnCallbackContext = {
   returnTo?: string;
 };
@@ -111,6 +113,12 @@ export interface AuthClientOptions {
   sessionStore: AbstractSessionStore;
 
   domain: string;
+  // Oauth2 discovery url, if different from domain
+  discoveryUrl?: string;
+  // Oauth2 end session url path
+  issuerEndSessionURLPath?: string;
+  // path param name for returnTo, if different from default "returnTo"
+  issuerEndSessionURLReturnParamName?: string;
   clientId: string;
   clientSecret?: string;
   clientAssertionSigningKey?: string | CryptoKey;
@@ -124,7 +132,7 @@ export interface AuthClientOptions {
 
   beforeSessionSaved?: BeforeSessionSavedHook;
   onCallback?: OnCallbackHook;
-
+  beforeLogout?: BeforeLogoutHook;
   routes?: RoutesOptions;
 
   // custom fetch implementation to allow for dependency injection
@@ -149,6 +157,9 @@ export class AuthClient {
   private clientAssertionSigningKey?: string | CryptoKey;
   private clientAssertionSigningAlg: string;
   private domain: string;
+  private discoveryUrl?: string;
+  private issuerEndSessionURLPath?: string;
+  private issuerEndSessionURLReturnParamName?: string;
   private authorizationParameters: AuthorizationParameters;
   private pushedAuthorizationRequests: boolean;
 
@@ -157,7 +168,7 @@ export class AuthClient {
 
   private beforeSessionSaved?: BeforeSessionSavedHook;
   private onCallback: OnCallbackHook;
-
+  private beforeLogout?: BeforeLogoutHook;
   private routes: Routes;
 
   private fetch: typeof fetch;
@@ -212,6 +223,12 @@ export class AuthClient {
 
     // authorization server
     this.domain = options.domain;
+    // Oauth2 discovery url, if different from domain
+    this.discoveryUrl = options.discoveryUrl;
+    // Oauth2 end session url path
+    this.issuerEndSessionURLPath = options.issuerEndSessionURLPath;
+    // path param name for returnTo, if different from default "returnTo"
+    this.issuerEndSessionURLReturnParamName = options.issuerEndSessionURLReturnParamName;
     this.clientMetadata = { client_id: options.clientId };
     this.clientSecret = options.clientSecret;
     this.authorizationParameters = options.authorizationParameters || {
@@ -243,7 +260,7 @@ export class AuthClient {
     // hooks
     this.beforeSessionSaved = options.beforeSessionSaved;
     this.onCallback = options.onCallback || this.defaultOnCallback;
-
+    this.beforeLogout = options.beforeLogout;
     // routes
     this.routes = {
       login: "/auth/login",
@@ -394,6 +411,9 @@ export class AuthClient {
 
   async handleLogout(req: NextRequest): Promise<NextResponse> {
     const session = await this.sessionStore.get(req.cookies);
+    if (this.beforeLogout) {
+      await this.beforeLogout(session);
+    }
     const [discoveryError, authorizationServerMetadata] =
       await this.discoverAuthorizationServerMetadata();
 
@@ -414,8 +434,8 @@ export class AuthClient {
       console.warn(
         "The Auth0 client does not have RP-initiated logout enabled, the user will be redirected to the `/v2/logout` endpoint instead. Learn how to enable it here: https://auth0.com/docs/authenticate/login/logout/log-users-out-of-auth0#enable-endpoint-discovery"
       );
-      const url = new URL("/v2/logout", this.issuer);
-      url.searchParams.set("returnTo", returnTo);
+      const url = new URL(this.issuerEndSessionURLPath || "/v2/logout", this.issuer);
+      url.searchParams.set(this.issuerEndSessionURLReturnParamName || "returnTo", returnTo);
       url.searchParams.set("client_id", this.clientMetadata.client_id);
 
       const res = NextResponse.redirect(url);
@@ -1006,10 +1026,11 @@ export class AuthClient {
   }
 
   private get issuer(): string {
-    return this.domain.startsWith("http://") ||
-      this.domain.startsWith("https://")
-      ? this.domain
-      : `https://${this.domain}`;
+    const url = this.discoveryUrl ?? this.domain;
+    return url.startsWith("http://") ||
+      url.startsWith("https://")
+      ? url
+      : `https://${url}`;
   }
 
   /**

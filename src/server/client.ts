@@ -20,6 +20,7 @@ import {
   AuthClient,
   BeforeSessionSavedHook,
   OnCallbackHook,
+  BeforeLogoutHook,
   RoutesOptions
 } from "./auth-client";
 import { RequestCookies, ResponseCookies } from "./cookies";
@@ -43,6 +44,17 @@ export interface Auth0ClientOptions {
    * If it's not specified, it will be loaded from the `AUTH0_DOMAIN` environment variable.
    */
   domain?: string;
+
+  /**
+   * The Auth0 discovery url.
+   *
+   * If it's not specified, it will be loaded from the `AUTH0_DISCOVERY_URL` environment variable.
+   */
+  discoveryUrl?: string;
+
+  issuerEndSessionUrlPath?: string;
+  issuerEndSessionUrlReturnParamName?: string;
+
   /**
    * The Auth0 client ID.
    *
@@ -122,6 +134,12 @@ export interface Auth0ClientOptions {
    */
   onCallback?: OnCallbackHook;
 
+  /**
+   * A method to manipulate the session before logging out.
+   *
+   */
+  beforeLogout?: BeforeLogoutHook;
+
   // provide a session store to persist sessions in your own data store
   /**
    * A custom session store implementation used to persist sessions to a data store.
@@ -191,6 +209,10 @@ export class Auth0Client {
       clientAssertionSigningKey
     } = this.validateAndExtractRequiredOptions(options);
 
+    const discoveryUrl = options.discoveryUrl || process.env.AUTH0_DISCOVERY_URL;
+    const issuerEndSessionURLPath = options.issuerEndSessionUrlPath || process.env.AUTH0_ISSUER_END_SESSION_URL_PATH;
+    const issuerEndSessionURLReturnParamName = options.issuerEndSessionUrlReturnParamName || process.env.AUTH0_ISSUER_END_SESSION_URL_RETURN_PARAM_NAME;
+
     const clientAssertionSigningAlg =
       options.clientAssertionSigningAlg ||
       process.env.AUTH0_CLIENT_ASSERTION_SIGNING_ALG;
@@ -258,13 +280,17 @@ export class Auth0Client {
       authorizationParameters: options.authorizationParameters,
       pushedAuthorizationRequests: options.pushedAuthorizationRequests,
 
+      discoveryUrl,
+      issuerEndSessionURLPath,
+      issuerEndSessionURLReturnParamName,
+
       appBaseUrl,
       secret,
       signInReturnToPath: options.signInReturnToPath,
 
       beforeSessionSaved: options.beforeSessionSaved,
       onCallback: options.onCallback,
-
+      beforeLogout: options.beforeLogout,
       routes: options.routes,
 
       allowInsecureRequests: options.allowInsecureRequests,
@@ -751,7 +777,10 @@ export class Auth0Client {
         domain: "AUTH0_DOMAIN",
         clientId: "AUTH0_CLIENT_ID",
         appBaseUrl: "APP_BASE_URL",
-        secret: "AUTH0_SECRET"
+        secret: "AUTH0_SECRET",
+        discoveryUrl: "AUTH0_DISCOVERY_URL",
+        issuerEndSessionURLPath: "AUTH0_ISSUER_END_SESSION_URL_PATH",
+        issuerEndSessionURLReturnParamName: "AUTH0_ISSUER_END_SESSION_URL_RETURN_PARAM_NAME"
       };
 
       // Standard intro message explaining the issue
